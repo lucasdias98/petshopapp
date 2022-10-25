@@ -2,11 +2,16 @@ import { useState, useEffect } from "react";
 import AnimaisContext from "./AnimaisContext";
 import Tabela from "./Tabela";
 import Form from "./Form";
+import WithAuth from "../../seg/WithAuth";
+import Autenticacao from "../../seg/Autenticacao";
+import { useNavigate } from "react-router-dom";
 
 function Animais() {
 
+    let navigate = useNavigate();
+
     const [listaClientes, setListaClientes] = useState([]); //antibug
-    const [listaTipos, setlistaTipos] = useState([]);
+    const [listaTipos, setListaTipos] = useState([]);
     const [alerta, setAlerta] = useState({ "status": "", "message": "" });
     const [listaObjetos, setListaObjetos] = useState([]);
     const [editar, setEditar] = useState(false);
@@ -15,31 +20,101 @@ function Animais() {
     });
 
     const recuperar = async codigo => {
-        await fetch(`${process.env.REACT_APP_ENDERECO_API}/animais/${codigo}`)
-            .then(response => response.json())
-            .then(data => setObjeto(data))
-            .catch(err => setAlerta({ "status": "error", "message": err }))
+        try {
+            await fetch(`${process.env.REACT_APP_ENDERECO_API}/animais/${codigo}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-access-token": Autenticacao.pegaAutenticacao().token
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status);
+                })
+                .then(data => setObjeto(data))
+				.catch(err => setAlerta({ "status": "error", "message": err }))
+        }
+        catch (err) {
+            console.log('caiu no erro do recuperar por codigo: ' + err);
+            window.location.reload();
+            navigate("/login", { replace: true });
+        }
     }
 
     const recuperaAnimais = async () => {
-        await fetch(`${process.env.REACT_APP_ENDERECO_API}/animais`)
-            .then(response => response.json())
-            .then(data => setListaObjetos(data))
-            .catch(err => setAlerta({ "status": "error", "message": err }))
+        try {
+            await fetch(`${process.env.REACT_APP_ENDERECO_API}/animais`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-access-token": Autenticacao.pegaAutenticacao().token
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status)
+                })
+                .then(data => setListaObjetos(data))
+                .catch(err => setAlerta({ "status": "error", "message": err }))
+        } catch (err) {
+            setAlerta({ "status": "error", "message": err })
+            window.location.reload();
+            navigate("/login", { replace: true });
+        }
     }
 
     const recuperaClientes = async () => {
-        await fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes`)
-            .then(response => response.json())
-            .then(data => setListaClientes(data))
-            .catch(err => console.log('Erro: ' + err))
+        try {
+            await fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-access-token": Autenticacao.pegaAutenticacao().token
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status)
+                })
+                .then(data => setListaClientes(data))
+                .catch(err => setAlerta({ "status": "error", "message": err }))
+        } catch (err) {
+            setAlerta({ "status": "error", "message": err })
+            window.location.reload();
+            navigate("/login", { replace: true });
+        }
     }
 
     const recuperaTipos = async () => {
-        await fetch(`${process.env.REACT_APP_ENDERECO_API}/tipos`)
-            .then(response => response.json())
-            .then(data => setlistaTipos(data))
-            .catch(err => console.log('Erro: ' + err))
+        try {
+            await fetch(`${process.env.REACT_APP_ENDERECO_API}/tipos`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-access-token": Autenticacao.pegaAutenticacao().token
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status)
+                })
+                .then(data => setListaTipos(data))
+                .catch(err => setAlerta({ "status": "error", "message": err }))
+        } catch (err) {
+            setAlerta({ "status": "error", "message": err })
+            window.location.reload();
+            navigate("/login", { replace: true });
+        }
     }
 
     const acaoCadastrar = async e => {
@@ -49,9 +124,17 @@ function Animais() {
             await fetch(`${process.env.REACT_APP_ENDERECO_API}/animais`,
                 {
                     method: metodo,
-                    headers: {"Content-Type": "application/json"},
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-access-token": Autenticacao.pegaAutenticacao().token
+                    },
                     body: JSON.stringify(objeto)
-                }).then(response => response.json())
+                }).then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status)
+                })
                 .then(json => {
                     setAlerta({ status: json.status, message: json.message });
                     setObjeto(json.objeto);
@@ -61,6 +144,8 @@ function Animais() {
                 })
         } catch (err) {
             setAlerta({ "status": "error", "message": err })
+            window.location.reload();
+            navigate("/login", { replace: true });
         }
         recuperaAnimais();
     }
@@ -76,15 +161,20 @@ function Animais() {
             try {
                 await
                     fetch(`${process.env.REACT_APP_ENDERECO_API}/animais/${objeto.codigo}`,
-                        { method: "DELETE" })
+                        {
+                            method: "DELETE",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "x-access-token": Autenticacao.pegaAutenticacao().token
+                            }
+                        })
                         .then(response => response.json())
-                        .then(json => setAlerta({
-                            "status": json.status,
-                            "message": json.message
-                        }))
+                        .then(json => setAlerta({ status: json.status, message: json.message }))
                 recuperaAnimais();
             } catch (err) {
-                setAlerta({ "status": "error", "message": err })
+                console.log(err);
+                window.location.reload();
+                navigate("/login", { replace: true });
             }
         }
     }
@@ -116,4 +206,4 @@ function Animais() {
 
 }
 
-export default Animais;
+export default WithAuth(Animais);

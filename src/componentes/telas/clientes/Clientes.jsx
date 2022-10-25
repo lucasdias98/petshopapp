@@ -2,8 +2,13 @@ import { useState, useEffect } from "react";
 import ClientesContext from "./ClientesContext";
 import Tabela from "./Tabela";
 import Form from "./Form";
+import WithAuth from "../../seg/WithAuth";
+import Autenticacao from "../../seg/Autenticacao";
+import { useNavigate } from "react-router-dom";
 
 function Clientes() {
+
+    let navigate = useNavigate();
 
     const [alerta, setAlerta] = useState({ "status": "", "message": "" });
     const [listaObjetos, setListaObjetos] = useState([]);
@@ -13,10 +18,29 @@ function Clientes() {
     });
 
     const recuperar = async codigo => {
-        await fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes/${codigo}`)
-            .then(response => response.json())
-            .then(data => setObjeto(data))
-            .catch(err => setAlerta({ "status": "error", "message": err }))
+        try {
+            await fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes/${codigo}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-access-token": Autenticacao.pegaAutenticacao().token
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status);
+                })
+                .then(data => setObjeto(data))
+				.catch(err => setAlerta({ "status": "error", "message": err }))
+        }
+        catch (err) {
+            console.log('caiu no erro do recuperar por codigo: ' + err);
+            window.location.reload();
+            navigate("/login", { replace: true });
+        }
     }
 
     const acaoCadastrar = async e => {
@@ -26,9 +50,17 @@ function Clientes() {
             await fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes`,
                 {
                     method: metodo,
-                    headers: {"Content-Type": "application/json"},
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-access-token": Autenticacao.pegaAutenticacao().token
+                    },
                     body: JSON.stringify(objeto)
-                }).then(response => response.json())
+                }).then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status)
+                })
                 .then(json => {
                     setAlerta({ status: json.status, message: json.message });
                     setObjeto(json.objeto);
@@ -36,8 +68,10 @@ function Clientes() {
                         setEditar(true);
                     }
                 })
-        } catch (err) {
+        } catch (err) {            
             setAlerta({ "status": "error", "message": err })
+            window.location.reload();
+            navigate("/login", { replace: true });            
         }
         recuperaClientes();
     }
@@ -49,10 +83,27 @@ function Clientes() {
     }
 
     const recuperaClientes = async () => {
-        await fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes`)
-            .then(response => response.json())
-            .then(data => setListaObjetos(data))
-            .catch(err => setAlerta({ "status": "error", "message": err }))
+        try {
+            await fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes`, { // ver passo a passo no moodle recuperaPredio
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-access-token": Autenticacao.pegaAutenticacao().token
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Erro código: ' + response.status)
+                })
+                .then(data => setListaObjetos(data))
+                .catch(err => setAlerta({ "status": "error", "message": err }))
+        } catch (err) {
+            setAlerta({ "status": "error", "message": err })
+            window.location.reload();
+            navigate("/login", { replace: true });
+        }
     }
 
     const remover = async objeto => {
@@ -60,15 +111,20 @@ function Clientes() {
             try {
                 await
                     fetch(`${process.env.REACT_APP_ENDERECO_API}/clientes/${objeto.codigo}`,
-                        { method: "DELETE" })
+                        {
+                            method: "DELETE",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "x-access-token": Autenticacao.pegaAutenticacao().token
+                            }
+                        })
                         .then(response => response.json())
-                        .then(json => setAlerta({
-                            "status": json.status,
-                            "message": json.message
-                        }))
+                        .then(json => setAlerta({ status: json.status, message: json.message }))
                 recuperaClientes();
             } catch (err) {
-                setAlerta({ "status": "error", "message": err })
+                console.log(err);
+                window.location.reload();
+                navigate("/login", { replace: true });
             }
         }
     }
@@ -97,4 +153,4 @@ function Clientes() {
 
 }
 
-export default Clientes;
+export default WithAuth(Clientes);
